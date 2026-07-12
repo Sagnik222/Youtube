@@ -20,15 +20,15 @@
     },
     {
       "name": "Julius AI",
-      "status": "published",
-      "publishedAt": "2026-07-12T07:32:29.269Z",
-      "videoId": "mock_yt_iio5hbf5h"
+      "status": "queued",
+      "publishedAt": null,
+      "videoId": null
     },
     {
       "name": "NotebookLM",
-      "status": "published",
-      "publishedAt": "2026-07-12T07:32:59.268Z",
-      "videoId": "mock_yt_80qlmt8qf"
+      "status": "queued",
+      "publishedAt": null,
+      "videoId": null
     }
   ],
   "channelStats": {

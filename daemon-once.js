@@ -195,7 +195,8 @@ async function runCronJob() {
           const imageIdx = slideMapping[i];
           segments.push({
             imagePath: screenshotPaths[imageIdx],
-            audioPath: segmentAudioPath
+            audioPath: segmentAudioPath,
+            text: scriptData.storyboard[i].audio
           });
         }
         

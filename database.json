@@ -26,9 +26,9 @@
     },
     {
       "name": "NotebookLM",
-      "status": "queued",
-      "publishedAt": null,
-      "videoId": null
+      "status": "published",
+      "publishedAt": "2026-07-12T14:40:41.040Z",
+      "videoId": "Hyk247zkzWo"
     }
   ],
   "channelStats": {

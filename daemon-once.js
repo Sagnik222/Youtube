@@ -173,15 +173,34 @@ async function runCronJob() {
       let uploadResult;
       
       try {
-        // Step 1: Capture SaaS screenshots
+        // Step 1: Capture SaaS mobile screenshots
         const screenshotPaths = await captureScreenshots(productUrl, tempImageDir);
         
-        // Step 2: Generate narration audio script
-        const scriptText = scriptData.storyboard.map(s => s.audio).join(' ');
-        await generateSpeech(scriptText, voiceoverPath);
+        // Step 2: Generate narration audio segment files
+        const tempAudioDir = './temp_audio_segments';
+        if (!fs.existsSync(tempAudioDir)) fs.mkdirSync(tempAudioDir);
         
-        // Step 3: Compile into a vertical MP4 slideshow
-        await compileVideo(screenshotPaths, voiceoverPath, compiledVideoPath);
+        const segments = [];
+        
+        // Map 5 storyboard script blocks to our 3 captured vertical screenshots
+        // Segment 0, 1 -> Screenshot 0 (Hero)
+        // Segment 2, 3 -> Screenshot 1 (Features)
+        // Segment 4 -> Screenshot 2 (Pricing/CTA)
+        const slideMapping = [0, 0, 1, 1, 2];
+
+        for (let i = 0; i < scriptData.storyboard.length; i++) {
+          const segmentAudioPath = path.join(tempAudioDir, `seg_audio_${i}.mp3`);
+          await generateSpeech(scriptData.storyboard[i].audio, segmentAudioPath);
+          
+          const imageIdx = slideMapping[i];
+          segments.push({
+            imagePath: screenshotPaths[imageIdx],
+            audioPath: segmentAudioPath
+          });
+        }
+        
+        // Step 3: Compile segments and stitch into final vertical video
+        await compileVideo(segments, compiledVideoPath);
 
         // Step 4: Perform upload based on credentials
         const creds = checkCredentials();
@@ -216,7 +235,17 @@ async function runCronJob() {
         // Step 5: Always clean up temporary video rendering files
         console.log('[Autopilot Cron] Cleaning up temporary rendering assets...');
         if (fs.existsSync(compiledVideoPath)) fs.unlinkSync(compiledVideoPath);
-        if (fs.existsSync(voiceoverPath)) fs.unlinkSync(voiceoverPath);
+        
+        // Clean temporary audio directory segments
+        const tempAudioDir = './temp_audio_segments';
+        if (fs.existsSync(tempAudioDir)) {
+          fs.readdirSync(tempAudioDir).forEach(file => {
+            fs.unlinkSync(path.join(tempAudioDir, file));
+          });
+          fs.rmdirSync(tempAudioDir);
+        }
+        
+        // Clean temporary image directory screenshots
         if (fs.existsSync(tempImageDir)) {
           fs.readdirSync(tempImageDir).forEach(file => {
             fs.unlinkSync(path.join(tempImageDir, file));

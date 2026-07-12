@@ -1,5 +1,5 @@
 // Headless Screenshot Grabber using Puppeteer
-// Captures landing pages, features, and pricing sections of the target SaaS tool.
+// Captures responsive vertical layouts of target SaaS tools for Shorts ratio.
 
 import fs from 'fs';
 import path from 'path';
@@ -10,7 +10,7 @@ export async function captureScreenshots(url, outputDir) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  console.log(`[Screenshot Grabber] Launching headless browser to capture URL: ${url}...`);
+  console.log(`[Screenshot Grabber] Launching vertical mobile browser to capture URL: ${url}...`);
 
   // Launch browser with sandbox flags required for GitHub Actions runners
   const browser = await puppeteer.launch({
@@ -26,13 +26,15 @@ export async function captureScreenshots(url, outputDir) {
   try {
     const page = await browser.newPage();
     
-    // Set standard viewport
-    await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 });
+    // Set vertical viewport matching YouTube Shorts 9:16 aspect ratio
+    await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
+    // Emulate mobile user agent to force responsive web layout
+    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');
 
     // Navigate to page
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    // Close cookie popups or banners if visible (to keep screenshots clean)
+    // Close cookie popups or banners if visible
     try {
       const selectors = ['button*="Accept"', 'button*="Consent"', '#cookie-accept', '.cookie-banner button'];
       for (const s of selectors) {
@@ -45,21 +47,21 @@ export async function captureScreenshots(url, outputDir) {
       // Ignore if no banner
     }
 
-    console.log('[Screenshot Grabber] Taking Slide 1: Hero landing page...');
+    console.log('[Screenshot Grabber] Taking Slide 1: Hero landing page (mobile)...');
     const slide1Path = path.join(outputDir, '1.png');
     await page.screenshot({ path: slide1Path });
 
-    console.log('[Screenshot Grabber] Scrolling to Features...');
+    console.log('[Screenshot Grabber] Scrolling to Features (mobile)...');
     await page.evaluate(() => {
-      window.scrollTo(0, window.innerHeight * 0.7);
+      window.scrollTo(0, window.innerHeight * 0.95);
     });
-    await new Promise(resolve => setTimeout(resolve, 800)); // wait for scroll animation
+    await new Promise(resolve => setTimeout(resolve, 800));
     const slide2Path = path.join(outputDir, '2.png');
     await page.screenshot({ path: slide2Path });
 
-    console.log('[Screenshot Grabber] Scrolling to Pricing/Product...');
+    console.log('[Screenshot Grabber] Scrolling to Pricing/Details (mobile)...');
     await page.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight * 0.6);
+      window.scrollTo(0, document.body.scrollHeight * 0.7);
     });
     await new Promise(resolve => setTimeout(resolve, 800));
     const slide3Path = path.join(outputDir, '3.png');

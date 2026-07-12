@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { getProductByName } from './scraper.js';
 import { generateShortsScript, formatScriptToMarkdown } from './scriptwriter.js';
-import { uploadVideoMock } from './youtube-uploader.js';
+import { uploadVideoProduction, checkCredentials } from './youtube-uploader.js';
 import { updateStatsMock } from './analytics.js';
 
 const DB_PATH = './database.json';
@@ -153,12 +153,27 @@ async function runCronJob() {
       const scriptData = generateShortsScript(productDetails);
       const markdownScript = formatScriptToMarkdown(scriptData);
 
-      // Simulate upload
-      const uploadResult = await uploadVideoMock({
-        title: scriptData.titles[0],
-        description: scriptData.description,
-        tags: scriptData.tags
-      });
+      // Perform real or mock upload based on credentials availability
+      let uploadResult;
+      const creds = checkCredentials();
+      
+      if (creds.ready) {
+        // Use the test placeholder video in scratch if it exists
+        const placeholderVideoPath = '/Users/sagnikchakraborty/.gemini/antigravity/scratch/video.mp4';
+        uploadResult = await uploadVideoProduction({
+          title: scriptData.titles[0],
+          description: scriptData.description,
+          tags: scriptData.tags
+        }, placeholderVideoPath);
+      } else {
+        console.log('[Autopilot Cron] API Credentials not ready. Running in Mock Mode.');
+        // Fallback to simulated uploader
+        uploadResult = await uploadVideoProduction({
+          title: scriptData.titles[0],
+          description: scriptData.description,
+          tags: scriptData.tags
+        }, 'mock-path');
+      }
 
       if (uploadResult.success) {
         // Update DB status

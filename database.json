@@ -2,9 +2,9 @@
   "products": [
     {
       "name": "v0.dev",
-      "status": "queued",
-      "publishedAt": null,
-      "videoId": null
+      "status": "published",
+      "publishedAt": "2026-07-12T14:49:27.981Z",
+      "videoId": "pzrF74cvg7s"
     },
     {
       "name": "ElevenLabs Reader",
@@ -38,7 +38,7 @@
     "estimatedEarningsUSD": 48.2,
     "affiliateClicks": 290,
     "affiliateSales": 12,
-    "affiliateEarningsUSD": 240.0
+    "affiliateEarningsUSD": 240
   },
   "history": []
 }

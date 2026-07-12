@@ -7,6 +7,9 @@ import { getProductByName } from './scraper.js';
 import { generateShortsScript, formatScriptToMarkdown } from './scriptwriter.js';
 import { uploadVideoProduction, checkCredentials } from './youtube-uploader.js';
 import { updateStatsMock } from './analytics.js';
+import { captureScreenshots } from './screenshot-grabber.js';
+import { generateSpeech } from './audio-generator.js';
+import { compileVideo } from './video-compiler.js';
 
 const DB_PATH = './database.json';
 const REPORT_DIR = './reports';
@@ -153,38 +156,73 @@ async function runCronJob() {
       const scriptData = generateShortsScript(productDetails);
       const markdownScript = formatScriptToMarkdown(scriptData);
 
-      // Perform real or mock upload based on credentials availability
-      let uploadResult;
-      const creds = checkCredentials();
+      // Mapping SaaS tool websites to screenshot
+      const urlMap = {
+        'v0.dev': 'https://v0.dev',
+        'elevenlabs reader': 'https://elevenlabs.io',
+        'cursor composer': 'https://cursor.com',
+        'julius ai': 'https://julius.ai',
+        'notebooklm': 'https://notebooklm.google'
+      };
       
-      if (creds.ready) {
-        // Use the test placeholder video in scratch if it exists
-        const placeholderVideoPath = './video.mp4';
-        uploadResult = await uploadVideoProduction({
-          title: scriptData.titles[0],
-          description: scriptData.description,
-          tags: scriptData.tags
-        }, placeholderVideoPath);
-      } else {
-        console.log('[Autopilot Cron] API Credentials not ready. Running in Mock Mode.');
-        // Fallback to simulated uploader
-        uploadResult = await uploadVideoProduction({
-          title: scriptData.titles[0],
-          description: scriptData.description,
-          tags: scriptData.tags
-        }, 'mock-path');
-      }
+      const productUrl = urlMap[queuedProduct.name.toLowerCase()] || 'https://google.com';
+      const tempImageDir = './temp_images';
+      const voiceoverPath = './temp_voiceover.mp3';
+      const compiledVideoPath = './output_video.mp4';
+      
+      let uploadResult;
+      
+      try {
+        // Step 1: Capture SaaS screenshots
+        const screenshotPaths = await captureScreenshots(productUrl, tempImageDir);
+        
+        // Step 2: Generate narration audio script
+        const scriptText = scriptData.storyboard.map(s => s.audio).join(' ');
+        await generateSpeech(scriptText, voiceoverPath);
+        
+        // Step 3: Compile into a vertical MP4 slideshow
+        await compileVideo(screenshotPaths, voiceoverPath, compiledVideoPath);
 
-      if (uploadResult.success) {
-        // Update DB status
-        data.products[queuedProductIndex].status = 'published';
-        data.products[queuedProductIndex].publishedAt = new Date().toISOString();
-        data.products[queuedProductIndex].videoId = uploadResult.videoId;
+        // Step 4: Perform upload based on credentials
+        const creds = checkCredentials();
+        if (creds.ready) {
+          uploadResult = await uploadVideoProduction({
+            title: scriptData.titles[0],
+            description: scriptData.description,
+            tags: scriptData.tags
+          }, compiledVideoPath);
+        } else {
+          console.log('[Autopilot Cron] API Credentials not ready. Running in Mock Mode.');
+          uploadResult = await uploadVideoProduction({
+            title: scriptData.titles[0],
+            description: scriptData.description,
+            tags: scriptData.tags
+          }, 'mock-path');
+        }
 
-        // Write publication archive
-        const pubPath = path.join(PUBLISH_DIR, `publish_${uploadResult.videoId}.md`);
-        fs.writeFileSync(pubPath, markdownScript);
-        console.log(`[Autopilot Cron] Saved publication history log: ${pubPath}`);
+        if (uploadResult.success) {
+          // Update DB status
+          data.products[queuedProductIndex].status = 'published';
+          data.products[queuedProductIndex].publishedAt = new Date().toISOString();
+          data.products[queuedProductIndex].videoId = uploadResult.videoId;
+
+          // Write publication archive
+          const pubPath = path.join(PUBLISH_DIR, `publish_${uploadResult.videoId}.md`);
+          fs.writeFileSync(pubPath, markdownScript);
+          console.log(`[Autopilot Cron] Saved publication history log: ${pubPath}`);
+        }
+
+      } finally {
+        // Step 5: Always clean up temporary video rendering files
+        console.log('[Autopilot Cron] Cleaning up temporary rendering assets...');
+        if (fs.existsSync(compiledVideoPath)) fs.unlinkSync(compiledVideoPath);
+        if (fs.existsSync(voiceoverPath)) fs.unlinkSync(voiceoverPath);
+        if (fs.existsSync(tempImageDir)) {
+          fs.readdirSync(tempImageDir).forEach(file => {
+            fs.unlinkSync(path.join(tempImageDir, file));
+          });
+          fs.rmdirSync(tempImageDir);
+        }
       }
     } else {
       console.log('[Autopilot Cron] No queued products found. Searching for new trends...');

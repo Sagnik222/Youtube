@@ -68,153 +68,212 @@ async function safeNavigate(page, url, waitMs = 3000) {
 // Tool-specific demo interaction sequences
 const toolDemos = {
   'v0.dev': async (page) => {
-    // v0.dev IS the prompt playground
-    console.log('[Screen Recorder] v0.dev: Typing a design prompt...');
-    await new Promise(r => setTimeout(r, 2000));
-    
-    const ta = await page.$('textarea');
-    if (ta) {
-      await humanType(page, 'textarea', 'Build a modern dark-mode analytics dashboard with a sidebar, charts, and user stats cards');
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // Try pressing Enter or clicking submit
-      await page.keyboard.press('Enter');
-      await new Promise(r => setTimeout(r, 5000)); // Wait for AI generation
+    console.log('[Screen Recorder] v0.dev: Typing prompt and browsing templates...');
+    await new Promise(r => setTimeout(r, 2500));
+
+    // v0.dev uses a custom input — try multiple selectors
+    const inputSelectors = ['textarea', 'input[placeholder*="build"]', 'input[placeholder*="Ask"]', '[contenteditable="true"]', 'input[type="text"]'];
+    let typed = false;
+    for (const sel of inputSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el) {
+          await el.click();
+          await new Promise(r => setTimeout(r, 500));
+          await page.keyboard.type('Build a dark-mode SaaS dashboard with sidebar navigation and analytics charts', { delay: 45 });
+          typed = true;
+          await new Promise(r => setTimeout(r, 2000));
+          break;
+        }
+      } catch (e) {}
     }
-    
-    // Scroll to see generated output
-    await smoothScroll(page, 600, 2000);
-    await new Promise(r => setTimeout(r, 3000));
+
+    if (typed) {
+      await page.keyboard.press('Enter');
+      await new Promise(r => setTimeout(r, 4000));
+    }
+
+    // Scroll down to the template gallery
+    await smoothScroll(page, 500, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Click on template cards to show generated projects
+    const cardSelectors = ['a[href*="/t/"]', '[class*="template"] a', '[class*="card"] a', 'a[href*="chat"]'];
+    for (const sel of cardSelectors) {
+      try {
+        const cards = await page.$$(sel);
+        if (cards.length > 0) {
+          console.log(`[Screen Recorder] Clicking template card...`);
+          await cards[0].click();
+          await new Promise(r => setTimeout(r, 4000));
+          
+          // Scroll through the generated project
+          await smoothScroll(page, 600, 2500);
+          await new Promise(r => setTimeout(r, 2500));
+          await smoothScroll(page, 400, 2000);
+          await new Promise(r => setTimeout(r, 2000));
+
+          // Go back to main page
+          await page.goBack();
+          await new Promise(r => setTimeout(r, 3000));
+
+          // Click a second template
+          if (cards.length > 1) {
+            await cards[1].click();
+            await new Promise(r => setTimeout(r, 4000));
+            await smoothScroll(page, 500, 2000);
+            await new Promise(r => setTimeout(r, 2000));
+            await page.goBack();
+            await new Promise(r => setTimeout(r, 2000));
+          }
+          break;
+        }
+      } catch (e) {}
+    }
+
+    // Browse Templates page
+    await safeNavigate(page, 'https://v0.dev/templates', 3000);
+    await smoothScroll(page, 600, 2500);
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Visit Pricing
+    await safeNavigate(page, 'https://v0.dev/pricing', 3000);
     await smoothScroll(page, 400, 2000);
     await new Promise(r => setTimeout(r, 2000));
-    
-    // Scroll back to show full result
-    await smoothScroll(page, -500, 2000);
-    await new Promise(r => setTimeout(r, 3000));
   },
 
   'elevenlabs': async (page) => {
-    // ElevenLabs has a public TTS demo widget on the homepage
     console.log('[Screen Recorder] ElevenLabs: Interacting with voice demo...');
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Find and interact with the text demo area
-    const textareas = await page.$$('textarea');
-    if (textareas.length > 0) {
-      await textareas[0].click();
-      await new Promise(r => setTimeout(r, 500));
-      // Select all and delete existing text
-      await page.keyboard.down('Control');
-      await page.keyboard.press('KeyA');
-      await page.keyboard.up('Control');
-      await page.keyboard.press('Backspace');
-      await new Promise(r => setTimeout(r, 300));
-      
-      await humanType(page, 'textarea', 'Welcome to the future of AI voices. This technology will transform how we create content forever.');
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // Try to click the Generate/Play button
-      await safeClick(page, 'button[aria-label="Generate"]', 3000);
-      await safeClick(page, 'button*="Generate"', 3000);
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Find and interact with the text demo area using flexible selectors
+    const inputSelectors = ['textarea', '[contenteditable="true"]', 'input[type="text"]'];
+    for (const sel of inputSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el) {
+          await el.click();
+          await new Promise(r => setTimeout(r, 500));
+          await page.keyboard.down('Control');
+          await page.keyboard.press('KeyA');
+          await page.keyboard.up('Control');
+          await page.keyboard.press('Backspace');
+          await new Promise(r => setTimeout(r, 300));
+          await page.keyboard.type('Welcome to the future of AI voice generation. This tool creates voices that sound completely human.', { delay: 40 });
+          await new Promise(r => setTimeout(r, 2000));
+          
+          // Try clicking any Generate/Play button
+          await safeClick(page, 'button[aria-label*="Generate"]', 3000);
+          await safeClick(page, 'button[aria-label*="Play"]', 3000);
+          break;
+        }
+      } catch (e) {}
     }
-    
-    // Scroll through voice selection and features
+
+    // Scroll to show more features
     await smoothScroll(page, 800, 3000);
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Navigate to the Voice Library page
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Navigate to Voice Library
     await safeNavigate(page, 'https://elevenlabs.io/voice-library', 3000);
     await smoothScroll(page, 500, 2000);
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Navigate to pricing
-    await safeNavigate(page, 'https://elevenlabs.io/pricing', 3000);
+    await new Promise(r => setTimeout(r, 2500));
     await smoothScroll(page, 400, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Navigate to Pricing
+    await safeNavigate(page, 'https://elevenlabs.io/pricing', 3000);
+    await smoothScroll(page, 500, 2000);
     await new Promise(r => setTimeout(r, 2000));
   },
 
   'julius': async (page) => {
-    // Julius AI - data analysis tool
-    console.log('[Screen Recorder] Julius AI: Showing data analysis demo...');
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Try to interact with any prompt/chat input
-    const ta = await page.$('textarea') || await page.$('input[type="text"]');
-    if (ta) {
-      const sel = (await page.$('textarea')) ? 'textarea' : 'input[type="text"]';
-      await humanType(page, sel, 'Analyze my sales data and create a monthly revenue chart with growth trends');
-      await new Promise(r => setTimeout(r, 2000));
-      await page.keyboard.press('Enter');
-      await new Promise(r => setTimeout(r, 4000));
+    console.log('[Screen Recorder] Julius AI: Showing data analysis capabilities...');
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Try to interact with any prompt input
+    const inputSelectors = ['textarea', 'input[type="text"]', '[contenteditable="true"]'];
+    for (const sel of inputSelectors) {
+      try {
+        const el = await page.$(sel);
+        if (el) {
+          await el.click();
+          await new Promise(r => setTimeout(r, 500));
+          await page.keyboard.type('Analyze my sales data and create a monthly revenue chart with growth predictions', { delay: 45 });
+          await new Promise(r => setTimeout(r, 2000));
+          await page.keyboard.press('Enter');
+          await new Promise(r => setTimeout(r, 4000));
+          break;
+        }
+      } catch (e) {}
     }
-    
-    // Scroll through homepage features
+
+    // Browse through homepage features
     await smoothScroll(page, 700, 2500);
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Click on feature cards or tabs if available
-    await safeClick(page, '[class*="feature"]', 2000);
-    await safeClick(page, '[class*="tab"]', 2000);
-    
+    await new Promise(r => setTimeout(r, 2500));
     await smoothScroll(page, 500, 2000);
     await new Promise(r => setTimeout(r, 2000));
+
+    // Click on any visible feature cards/buttons
+    await safeClick(page, 'a[href*="example"]', 2000);
+    await safeClick(page, 'a[href*="use-case"]', 2000);
     
-    // Navigate to use cases or pricing
-    await safeNavigate(page, 'https://julius.ai/pricing', 3000);
     await smoothScroll(page, 400, 2000);
     await new Promise(r => setTimeout(r, 2000));
+
+    // Navigate to pricing
+    await safeNavigate(page, 'https://julius.ai/pricing', 3000);
+    await smoothScroll(page, 400, 2000);
+    await new Promise(r => setTimeout(r, 2500));
   },
 
   'cursor': async (page) => {
-    // Cursor - AI code editor
     console.log('[Screen Recorder] Cursor: Showcasing AI coding features...');
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Browse the main landing page features
-    await smoothScroll(page, 600, 2500);
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Click feature section links or demo videos
-    await safeClick(page, '[class*="feature"]', 2000);
-    await safeClick(page, 'a[href*="feature"]', 2000);
-    
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Browse the landing page features slowly
     await smoothScroll(page, 500, 2500);
+    await new Promise(r => setTimeout(r, 2500));
+    await smoothScroll(page, 500, 2500);
+    await new Promise(r => setTimeout(r, 2500));
+    await smoothScroll(page, 400, 2000);
     await new Promise(r => setTimeout(r, 2000));
-    
+
     // Navigate to features page
     await safeNavigate(page, 'https://cursor.com/features', 3000);
     await smoothScroll(page, 600, 2500);
+    await new Promise(r => setTimeout(r, 2500));
+    await smoothScroll(page, 500, 2500);
     await new Promise(r => setTimeout(r, 2000));
-    await smoothScroll(page, 400, 2000);
-    await new Promise(r => setTimeout(r, 2000));
-    
+
     // Navigate to pricing
     await safeNavigate(page, 'https://cursor.com/pricing', 3000);
-    await smoothScroll(page, 400, 2000);
-    await new Promise(r => setTimeout(r, 2000));
+    await smoothScroll(page, 500, 2000);
+    await new Promise(r => setTimeout(r, 2500));
   },
 
   'notebooklm': async (page) => {
-    // NotebookLM by Google
     console.log('[Screen Recorder] NotebookLM: Exploring AI notebook features...');
-    await new Promise(r => setTimeout(r, 2000));
-    
-    // Scroll through the landing page
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Browse landing page
     await smoothScroll(page, 500, 2500);
     await new Promise(r => setTimeout(r, 2500));
-    
-    // Click on feature highlights or interactive elements
+
+    // Click on any interactive elements or cards
+    await safeClick(page, 'a[href*="about"]', 2000);
     await safeClick(page, '[class*="card"]', 2000);
-    await safeClick(page, 'button', 2000);
-    
+
     await smoothScroll(page, 600, 2500);
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 2500));
     await smoothScroll(page, 400, 2000);
     await new Promise(r => setTimeout(r, 2000));
-    
-    // Navigate to FAQ or about section
+
+    // Navigate to about/FAQ
     await safeNavigate(page, 'https://notebooklm.google/about', 3000);
     await smoothScroll(page, 500, 2500);
+    await new Promise(r => setTimeout(r, 2500));
+    await smoothScroll(page, 400, 2000);
     await new Promise(r => setTimeout(r, 2000));
   }
 };

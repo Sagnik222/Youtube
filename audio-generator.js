@@ -52,8 +52,42 @@ function splitTextIntoChunks(text, maxLength = 180) {
 
 export async function generateSpeech(scriptText, outputPath) {
   const openAiApiKey = process.env.OPENAI_API_KEY;
+  const googleApiKey = process.env.GOOGLE_API_KEY;
 
-  // Use ultra-realistic OpenAI Neural TTS if API key is configured
+  // Option 1: Use premium Google Cloud Neural TTS (Free tier: 1 million characters/month!)
+  if (googleApiKey) {
+    console.log('[Audio Generator] Generating premium human voice using Google Cloud Neural TTS (en-US-Neural2-J)...');
+    try {
+      const response = await axios.post(
+        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`,
+        {
+          input: { text: scriptText },
+          voice: { 
+            languageCode: 'en-US', 
+            name: 'en-US-Neural2-J', // Modern premium natural neural male voice
+            ssmlGender: 'MALE' 
+          },
+          audioConfig: { 
+            audioEncoding: 'MP3',
+            speakingRate: 1.05 // Slightly faster for high-retention Shorts
+          }
+        }
+      );
+
+      if (response.data && response.data.audioContent) {
+        const audioBuffer = Buffer.from(response.data.audioContent, 'base64');
+        fs.writeFileSync(outputPath, audioBuffer);
+        console.log(`[Audio Generator] Success! Saved Google Neural voiceover: ${outputPath}`);
+        return;
+      } else {
+        throw new Error('No audioContent returned from Google Cloud TTS API');
+      }
+    } catch (err) {
+      console.warn(`[Audio Generator Warning] Google Cloud TTS failed: ${err.message}. Falling back...`);
+    }
+  }
+
+  // Option 2: Use premium OpenAI Neural TTS if configured
   if (openAiApiKey) {
     console.log('[Audio Generator] Generating premium human voice using OpenAI TTS (onyx)...');
     try {
@@ -67,7 +101,7 @@ export async function generateSpeech(scriptText, outputPath) {
         data: {
           model: 'tts-1',
           input: scriptText,
-          voice: 'onyx' // Premium professional male tech host voice
+          voice: 'onyx'
         },
         responseType: 'stream'
       });
@@ -83,7 +117,7 @@ export async function generateSpeech(scriptText, outputPath) {
       console.log(`[Audio Generator] Success! Saved premium OpenAI voiceover: ${outputPath}`);
       return;
     } catch (err) {
-      console.warn(`[Audio Generator Warning] OpenAI TTS request failed: ${err.message}. Falling back to standard Google TTS...`);
+      console.warn(`[Audio Generator Warning] OpenAI TTS request failed: ${err.message}. Falling back...`);
     }
   }
 

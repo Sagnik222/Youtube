@@ -20,9 +20,9 @@
     },
     {
       "name": "Julius AI",
-      "status": "queued",
-      "publishedAt": null,
-      "videoId": null
+      "status": "published",
+      "publishedAt": "2026-07-12T10:39:50.751Z",
+      "videoId": "xZUDZ6rQHHY"
     },
     {
       "name": "NotebookLM",

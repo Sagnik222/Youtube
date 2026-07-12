@@ -7,7 +7,7 @@ import { getProductByName } from './scraper.js';
 import { generateShortsScript, formatScriptToMarkdown } from './scriptwriter.js';
 import { uploadVideoProduction, checkCredentials } from './youtube-uploader.js';
 import { updateStatsMock } from './analytics.js';
-import { captureScreenshots } from './screenshot-grabber.js';
+import { captureStoryboards } from './screenshot-grabber.js';
 import { generateSpeech } from './audio-generator.js';
 import { compileVideo } from './video-compiler.js';
 
@@ -173,28 +173,21 @@ async function runCronJob() {
       let uploadResult;
       
       try {
-        // Step 1: Capture SaaS mobile screenshots
-        const screenshotPaths = await captureScreenshots(productUrl, tempImageDir);
+        // Step 1: Capture SaaS mobile screenshots with pre-baked subtitles
+        const screenshotPaths = await captureStoryboards(productUrl, scriptData.storyboard, tempImageDir);
         
         // Step 2: Generate narration audio segment files
         const tempAudioDir = './temp_audio_segments';
         if (!fs.existsSync(tempAudioDir)) fs.mkdirSync(tempAudioDir);
         
         const segments = [];
-        
-        // Map 5 storyboard script blocks to our 3 captured vertical screenshots
-        // Segment 0, 1 -> Screenshot 0 (Hero)
-        // Segment 2, 3 -> Screenshot 1 (Features)
-        // Segment 4 -> Screenshot 2 (Pricing/CTA)
-        const slideMapping = [0, 0, 1, 1, 2];
 
         for (let i = 0; i < scriptData.storyboard.length; i++) {
           const segmentAudioPath = path.join(tempAudioDir, `seg_audio_${i}.mp3`);
           await generateSpeech(scriptData.storyboard[i].audio, segmentAudioPath);
           
-          const imageIdx = slideMapping[i];
           segments.push({
-            imagePath: screenshotPaths[imageIdx],
+            imagePath: screenshotPaths[i],
             audioPath: segmentAudioPath,
             text: scriptData.storyboard[i].audio
           });

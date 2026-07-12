@@ -1,5 +1,6 @@
 // Video Compiler using FFmpeg and FFprobe
-// Compiles crisp high-density vertical videos, applies Ken Burns zoompan filters, and burns dynamic wrapped subtitle captions.
+// Dynamically compiles vertical videos with smooth Ken Burns zoompan animations.
+// Subtitles are pre-baked into visual frames, avoiding native drawtext filter requirements.
 
 import fs from 'fs';
 import path from 'path';
@@ -19,59 +20,14 @@ function getAudioDuration(audioPath) {
   }
 }
 
-// Split long text into multiple lines for portrait drawtext filter bounding box
-function wrapText(text, maxChars = 22) {
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    if ((currentLine + ' ' + word).trim().length <= maxChars) {
-      currentLine = (currentLine + ' ' + word).trim();
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-  return lines.join('\n');
-}
-
-// Escape special characters for FFmpeg drawtext parameters
-function escapeFFmpegText(text) {
-  return text
-    .replace(/'/g, "'\\''")
-    .replace(/:/g, '\\:')
-    .replace(/"/g, '\\"');
-}
-
 export async function compileVideo(segments, outputPath) {
   const tempDir = './temp_video_rendering';
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
-  console.log(`[Video Compiler] Synthesizing vertical video with ${segments.length} segments and captions...`);
+  console.log(`[Video Compiler] Synthesizing vertical video with ${segments.length} segments...`);
   
   const tempVideoFiles = [];
   const listFilePath = path.join(tempDir, 'list.txt');
-
-  // Determine system font path for subtitle drawing
-  let fontOption = '';
-  let fontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
-  if (process.platform === 'darwin') {
-    fontPath = '/System/Library/Fonts/Supplemental/Arial.ttf';
-    if (!fs.existsSync(fontPath)) fontPath = '/Library/Fonts/Arial.ttf';
-  } else {
-    if (!fs.existsSync(fontPath)) {
-      fontPath = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf';
-    }
-  }
-
-  if (fs.existsSync(fontPath)) {
-    fontOption = `:fontfile='${fontPath}'`;
-    console.log(`[Video Compiler] Using subtitle font: ${fontPath}`);
-  } else {
-    console.log(`[Video Compiler] Subtitle font not found. Letting FFmpeg select default...`);
-  }
 
   try {
     for (let i = 0; i < segments.length; i++) {
@@ -83,18 +39,12 @@ export async function compileVideo(segments, outputPath) {
       const tempMerged = path.join(tempDir, `merged_${i}.mp4`);
       const totalFrames = Math.ceil(duration * 25);
 
-      // Build zoompan filter
+      // Build zoompan filter (No drawtext filter needed!)
       const zoompanFilter = `zoompan=z='min(zoom+0.0006,1.15)':d=${totalFrames}:s=1080x1920:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'`;
+      const vfChain = `scale=1080:1920:flags=lanczos,${zoompanFilter}`;
 
-      // Build drawtext subtitles filter
-      const wrappedText = wrapText(seg.text || '');
-      const escapedText = escapeFFmpegText(wrappedText);
-      const drawtextFilter = `,drawtext=text='${escapedText}'${fontOption}:fontsize=44:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=18:x=(w-text_w)/2:y=h-480:line_spacing=12`;
-
-      // Step A: Loop screenshot with Lanczos scaling, zoompan, and captions
+      // Step A: Loop screenshot with Lanczos scaling and zoompan
       console.log(`[Video Compiler] Compiling Slide ${i + 1} video stream...`);
-      const vfChain = `scale=1080:1920:flags=lanczos,${zoompanFilter}${drawtextFilter}`;
-      
       execSync(
         `ffmpeg -y -loop 1 -i "${seg.imagePath}" -t ${duration} -vf "${vfChain}" -c:v libx264 -crf 18 -preset fast -r 25 -pix_fmt yuv420p "${tempLoop}"`,
         { stdio: 'inherit' }
@@ -121,7 +71,7 @@ export async function compileVideo(segments, outputPath) {
       { stdio: 'inherit' }
     );
 
-    console.log(`[Video Compiler] Success! Saved final annotated video to: ${outputPath}`);
+    console.log(`[Video Compiler] Success! Saved final animated video to: ${outputPath}`);
 
   } catch (error) {
     console.error('[Video Compiler Error] Video compile failed:', error.message);

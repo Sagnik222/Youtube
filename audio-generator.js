@@ -1,12 +1,13 @@
-// Audio Narration Generator using Google Translate TTS API
-// Handles splitting script text into chunks under 200 chars and downloading narration MP3.
+// Audio Narration Generator using Microsoft Edge Neural TTS (Free, realistic) and OpenAI TTS (Premium)
+// Zero API keys required for realistic human voices out of the box!
 
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { execSync } from 'child_process';
+import { EdgeTTS } from 'edge-tts-universal';
 
-// Split script text into chunks under 180 characters for Google Translate TTS API compatibility
+// Split script text into chunks under 180 characters (used ONLY for Google Translate fallback)
 function splitTextIntoChunks(text, maxLength = 180) {
   const cleanText = text.replace(/\s+/g, ' ').trim();
   const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
@@ -52,42 +53,8 @@ function splitTextIntoChunks(text, maxLength = 180) {
 
 export async function generateSpeech(scriptText, outputPath) {
   const openAiApiKey = process.env.OPENAI_API_KEY;
-  const googleApiKey = process.env.GOOGLE_API_KEY;
 
-  // Option 1: Use premium Google Cloud Neural TTS (Free tier: 1 million characters/month!)
-  if (googleApiKey) {
-    console.log('[Audio Generator] Generating premium human voice using Google Cloud Neural TTS (en-US-Neural2-J)...');
-    try {
-      const response = await axios.post(
-        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`,
-        {
-          input: { text: scriptText },
-          voice: { 
-            languageCode: 'en-US', 
-            name: 'en-US-Neural2-J', // Modern premium natural neural male voice
-            ssmlGender: 'MALE' 
-          },
-          audioConfig: { 
-            audioEncoding: 'MP3',
-            speakingRate: 1.05 // Slightly faster for high-retention Shorts
-          }
-        }
-      );
-
-      if (response.data && response.data.audioContent) {
-        const audioBuffer = Buffer.from(response.data.audioContent, 'base64');
-        fs.writeFileSync(outputPath, audioBuffer);
-        console.log(`[Audio Generator] Success! Saved Google Neural voiceover: ${outputPath}`);
-        return;
-      } else {
-        throw new Error('No audioContent returned from Google Cloud TTS API');
-      }
-    } catch (err) {
-      console.warn(`[Audio Generator Warning] Google Cloud TTS failed: ${err.message}. Falling back...`);
-    }
-  }
-
-  // Option 2: Use premium OpenAI Neural TTS if configured
+  // Option 1: Use premium OpenAI Neural TTS if configured (ultra-realistic)
   if (openAiApiKey) {
     console.log('[Audio Generator] Generating premium human voice using OpenAI TTS (onyx)...');
     try {
@@ -117,15 +84,33 @@ export async function generateSpeech(scriptText, outputPath) {
       console.log(`[Audio Generator] Success! Saved premium OpenAI voiceover: ${outputPath}`);
       return;
     } catch (err) {
-      console.warn(`[Audio Generator Warning] OpenAI TTS request failed: ${err.message}. Falling back...`);
+      console.warn(`[Audio Generator Warning] OpenAI TTS failed: ${err.message}. Trying Edge TTS...`);
     }
   }
 
+  // Option 2: Use Microsoft Edge Neural TTS (100% Free, extremely realistic, no keys or billing required!)
+  console.log('[Audio Generator] Generating realistic human voice using Microsoft Edge Neural TTS (en-US-ChristopherNeural)...');
+  try {
+    const tts = new EdgeTTS({
+      voice: 'en-US-ChristopherNeural', // Natural, rich male voice
+      rate: '+5%', // Slightly faster for high-retention Shorts
+      pitch: '+0Hz'
+    });
+
+    const audioBuffer = await tts.synthesize(scriptText);
+    fs.writeFileSync(outputPath, audioBuffer);
+    console.log(`[Audio Generator] Success! Saved free Edge Neural voiceover: ${outputPath}`);
+    return;
+  } catch (edgeError) {
+    console.warn(`[Audio Generator Warning] Edge TTS failed: ${edgeError.message}. Falling back to Google Translate TTS...`);
+  }
+
+  // Option 3: Fallback to old Google Translate TTS chunking (Mechanical robotic voice)
   const tempDir = './temp_audio';
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
   const chunks = splitTextIntoChunks(scriptText);
-  console.log(`[Audio Generator] Splitting script into ${chunks.length} segments for TTS...`);
+  console.log(`[Audio Generator Fallback] Splitting script into ${chunks.length} segments for basic TTS...`);
 
   const tempFiles = [];
 
@@ -158,26 +143,20 @@ export async function generateSpeech(scriptText, outputPath) {
       await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    console.log(`[Audio Generator] All chunks downloaded. Concatenating using FFmpeg concat demuxer...`);
+    console.log(`[Audio Generator Fallback] Concatenating fallback chunks using FFmpeg...`);
     
-    // Write concat list file
     const listFilePath = path.join(tempDir, 'list.txt');
-    // FFmpeg concat demuxer requires paths to be escaped or relative to the list file,
-    // or set -safe 0 and use absolute/relative paths
     const listContent = tempFiles.map(file => `file '${path.resolve(file)}'`).join('\n') + '\n';
     fs.writeFileSync(listFilePath, listContent);
 
     const cmd = `ffmpeg -y -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`;
-    
-    console.log(`[Audio Generator] Running command: ${cmd}`);
     execSync(cmd, { stdio: 'inherit' });
-    console.log(`[Audio Generator] Success! Saved complete voiceover file: ${outputPath}`);
+    console.log(`[Audio Generator Fallback] Saved fallback voiceover file: ${outputPath}`);
 
   } catch (error) {
-    console.error('[Audio Generator Error] Failed to compile voiceover:', error.message);
+    console.error('[Audio Generator Error] Critical fallback synthesis failed:', error.message);
     throw error;
   } finally {
-    // Cleanup temporary chunk files
     tempFiles.forEach(file => {
       if (fs.existsSync(file)) fs.unlinkSync(file);
     });

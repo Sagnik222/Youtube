@@ -99,7 +99,8 @@ export async function generateSpeech(scriptText, outputPath) {
 
     const cmd = `ffmpeg -y -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`;
     
-    execSync(cmd, { stdio: 'ignore' });
+    console.log(`[Audio Generator] Running command: ${cmd}`);
+    execSync(cmd, { stdio: 'inherit' });
     console.log(`[Audio Generator] Success! Saved complete voiceover file: ${outputPath}`);
 
   } catch (error) {

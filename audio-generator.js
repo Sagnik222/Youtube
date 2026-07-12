@@ -91,14 +91,12 @@ export async function generateSpeech(scriptText, outputPath) {
   // Option 2: Use Microsoft Edge Neural TTS (100% Free, extremely realistic, no keys or billing required!)
   console.log('[Audio Generator] Generating realistic human voice using Microsoft Edge Neural TTS (en-US-ChristopherNeural)...');
   try {
-    const tts = new EdgeTTS({
-      voice: 'en-US-ChristopherNeural', // Natural, rich male voice
-      rate: '+5%', // Slightly faster for high-retention Shorts
-      pitch: '+0Hz'
-    });
-
-    const audioBuffer = await tts.synthesize(scriptText);
-    fs.writeFileSync(outputPath, audioBuffer);
+    const tts = new EdgeTTS(String(scriptText), 'en-US-ChristopherNeural');
+    const result = await tts.synthesize();
+    
+    // result may be an ArrayBuffer, Uint8Array, or Buffer depending on environment
+    const buffer = Buffer.isBuffer(result) ? result : Buffer.from(result);
+    fs.writeFileSync(outputPath, buffer);
     console.log(`[Audio Generator] Success! Saved free Edge Neural voiceover: ${outputPath}`);
     return;
   } catch (edgeError) {

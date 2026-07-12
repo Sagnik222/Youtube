@@ -3,13 +3,13 @@
 
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { getProductByName } from './scraper.js';
 import { generateShortsScript, formatScriptToMarkdown } from './scriptwriter.js';
 import { uploadVideoProduction, checkCredentials } from './youtube-uploader.js';
 import { updateStatsMock } from './analytics.js';
-import { captureStoryboards } from './screenshot-grabber.js';
+import { recordToolDemo } from './screen-recorder.js';
 import { generateSpeech } from './audio-generator.js';
-import { compileVideo } from './video-compiler.js';
 
 const DB_PATH = './database.json';
 const REPORT_DIR = './reports';
@@ -166,35 +166,26 @@ async function runCronJob() {
       };
       
       const productUrl = urlMap[queuedProduct.name.toLowerCase()] || 'https://google.com';
-      const tempImageDir = './temp_images';
-      const voiceoverPath = './temp_voiceover.mp3';
       const compiledVideoPath = './output_video.mp4';
       
       let uploadResult;
       
       try {
-        // Step 1: Capture SaaS mobile screenshots with pre-baked subtitles
-        const screenshotPaths = await captureStoryboards(productUrl, scriptData.storyboard, tempImageDir);
+        // Step 1: Record a REAL screen recording of the tool being used
+        const rawRecordingPath = './temp_raw_recording.mp4';
+        await recordToolDemo(productUrl, queuedProduct.name, rawRecordingPath, 55);
         
-        // Step 2: Generate narration audio segment files
-        const tempAudioDir = './temp_audio_segments';
-        if (!fs.existsSync(tempAudioDir)) fs.mkdirSync(tempAudioDir);
+        // Step 2: Generate full voiceover narration
+        const voiceoverPath = './temp_voiceover.mp3';
+        const fullNarration = scriptData.storyboard.map(s => s.audio).join(' ');
+        await generateSpeech(fullNarration, voiceoverPath);
         
-        const segments = [];
-
-        for (let i = 0; i < scriptData.storyboard.length; i++) {
-          const segmentAudioPath = path.join(tempAudioDir, `seg_audio_${i}.mp3`);
-          await generateSpeech(scriptData.storyboard[i].audio, segmentAudioPath);
-          
-          segments.push({
-            imagePath: screenshotPaths[i],
-            audioPath: segmentAudioPath,
-            text: scriptData.storyboard[i].audio
-          });
-        }
-        
-        // Step 3: Compile segments and stitch into final vertical video
-        await compileVideo(segments, compiledVideoPath);
+        // Step 3: Merge screen recording video + voiceover audio, trim to shortest
+        console.log('[Autopilot Cron] Merging screen recording with voiceover...');
+        execSync(
+          `ffmpeg -y -i "${rawRecordingPath}" -i "${voiceoverPath}" -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest "${compiledVideoPath}"`,
+          { stdio: 'inherit' }
+        );
 
         // Step 4: Perform upload based on credentials
         const creds = checkCredentials();
@@ -226,26 +217,10 @@ async function runCronJob() {
         }
 
       } finally {
-        // Step 5: Always clean up temporary video rendering files
+        // Step 5: Always clean up temporary files
         console.log('[Autopilot Cron] Cleaning up temporary rendering assets...');
-        if (fs.existsSync(compiledVideoPath)) fs.unlinkSync(compiledVideoPath);
-        
-        // Clean temporary audio directory segments
-        const tempAudioDir = './temp_audio_segments';
-        if (fs.existsSync(tempAudioDir)) {
-          fs.readdirSync(tempAudioDir).forEach(file => {
-            fs.unlinkSync(path.join(tempAudioDir, file));
-          });
-          fs.rmdirSync(tempAudioDir);
-        }
-        
-        // Clean temporary image directory screenshots
-        if (fs.existsSync(tempImageDir)) {
-          fs.readdirSync(tempImageDir).forEach(file => {
-            fs.unlinkSync(path.join(tempImageDir, file));
-          });
-          fs.rmdirSync(tempImageDir);
-        }
+        const tempFiles = [compiledVideoPath, './temp_raw_recording.mp4', './temp_voiceover.mp3'];
+        tempFiles.forEach(f => { if (fs.existsSync(f)) fs.unlinkSync(f); });
       }
     } else {
       console.log('[Autopilot Cron] No queued products found. Searching for new trends...');

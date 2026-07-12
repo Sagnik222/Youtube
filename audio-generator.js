@@ -51,6 +51,42 @@ function splitTextIntoChunks(text, maxLength = 180) {
 }
 
 export async function generateSpeech(scriptText, outputPath) {
+  const openAiApiKey = process.env.OPENAI_API_KEY;
+
+  // Use ultra-realistic OpenAI Neural TTS if API key is configured
+  if (openAiApiKey) {
+    console.log('[Audio Generator] Generating premium human voice using OpenAI TTS (onyx)...');
+    try {
+      const response = await axios({
+        method: 'post',
+        url: 'https://api.openai.com/v1/audio/speech',
+        headers: {
+          'Authorization': `Bearer ${openAiApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        data: {
+          model: 'tts-1',
+          input: scriptText,
+          voice: 'onyx' // Premium professional male tech host voice
+        },
+        responseType: 'stream'
+      });
+
+      const writer = fs.createWriteStream(outputPath);
+      response.data.pipe(writer);
+
+      await new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+      });
+      
+      console.log(`[Audio Generator] Success! Saved premium OpenAI voiceover: ${outputPath}`);
+      return;
+    } catch (err) {
+      console.warn(`[Audio Generator Warning] OpenAI TTS request failed: ${err.message}. Falling back to standard Google TTS...`);
+    }
+  }
+
   const tempDir = './temp_audio';
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 

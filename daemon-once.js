@@ -159,7 +159,7 @@ async function runCronJob() {
       
       if (creds.ready) {
         // Use the test placeholder video in scratch if it exists
-        const placeholderVideoPath = '/Users/sagnikchakraborty/.gemini/antigravity/scratch/video.mp4';
+        const placeholderVideoPath = './video.mp4';
         uploadResult = await uploadVideoProduction({
           title: scriptData.titles[0],
           description: scriptData.description,

@@ -1,13 +1,13 @@
 // Screen Recorder Module
-// Records a REAL browser session video using Puppeteer's CDP screencast API.
-// Captures frames as the browser renders them during live interactions, then stitches into MP4 with FFmpeg.
+// Records REAL browser sessions using Chrome DevTools Protocol screencast.
+// Navigates to actual demo/playground pages and performs meaningful tool interactions.
 
 import fs from 'fs';
 import path from 'path';
 import puppeteer from 'puppeteer';
 import { execSync } from 'child_process';
 
-// Helper: smooth scroll animation
+// Helper: smooth scroll animation with ease-in-out
 async function smoothScroll(page, distance, duration = 2000) {
   await page.evaluate(async (dist, dur) => {
     const start = window.scrollY;
@@ -16,7 +16,6 @@ async function smoothScroll(page, distance, duration = 2000) {
       function step() {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / dur, 1);
-        // Ease-in-out curve
         const ease = progress < 0.5
           ? 2 * progress * progress
           : -1 + (4 - 2 * progress) * progress;
@@ -30,13 +29,195 @@ async function smoothScroll(page, distance, duration = 2000) {
 }
 
 // Helper: type text with realistic human delays
-async function humanType(page, selector, text, charDelay = 60) {
-  await page.focus(selector);
-  await new Promise(r => setTimeout(r, 300));
-  for (const char of text) {
-    await page.keyboard.type(char, { delay: charDelay + Math.random() * 40 });
+async function humanType(page, selector, text, charDelay = 55) {
+  try {
+    await page.focus(selector);
+    await new Promise(r => setTimeout(r, 300));
+    for (const char of text) {
+      await page.keyboard.type(char, { delay: charDelay + Math.random() * 30 });
+    }
+  } catch (e) {
+    console.warn(`[Screen Recorder] Could not type into ${selector}: ${e.message}`);
   }
 }
+
+// Helper: click element safely
+async function safeClick(page, selector, waitAfter = 1500) {
+  try {
+    const el = await page.$(selector);
+    if (el) {
+      await el.click();
+      await new Promise(r => setTimeout(r, waitAfter));
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+// Helper: navigate to a URL safely within the same page session
+async function safeNavigate(page, url, waitMs = 3000) {
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await new Promise(r => setTimeout(r, waitMs));
+  } catch (e) {
+    console.warn(`[Screen Recorder] Navigation to ${url} partial: ${e.message}`);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
+
+// Tool-specific demo interaction sequences
+const toolDemos = {
+  'v0.dev': async (page) => {
+    // v0.dev IS the prompt playground
+    console.log('[Screen Recorder] v0.dev: Typing a design prompt...');
+    await new Promise(r => setTimeout(r, 2000));
+    
+    const ta = await page.$('textarea');
+    if (ta) {
+      await humanType(page, 'textarea', 'Build a modern dark-mode analytics dashboard with a sidebar, charts, and user stats cards');
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Try pressing Enter or clicking submit
+      await page.keyboard.press('Enter');
+      await new Promise(r => setTimeout(r, 5000)); // Wait for AI generation
+    }
+    
+    // Scroll to see generated output
+    await smoothScroll(page, 600, 2000);
+    await new Promise(r => setTimeout(r, 3000));
+    await smoothScroll(page, 400, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Scroll back to show full result
+    await smoothScroll(page, -500, 2000);
+    await new Promise(r => setTimeout(r, 3000));
+  },
+
+  'elevenlabs': async (page) => {
+    // ElevenLabs has a public TTS demo widget on the homepage
+    console.log('[Screen Recorder] ElevenLabs: Interacting with voice demo...');
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Find and interact with the text demo area
+    const textareas = await page.$$('textarea');
+    if (textareas.length > 0) {
+      await textareas[0].click();
+      await new Promise(r => setTimeout(r, 500));
+      // Select all and delete existing text
+      await page.keyboard.down('Control');
+      await page.keyboard.press('KeyA');
+      await page.keyboard.up('Control');
+      await page.keyboard.press('Backspace');
+      await new Promise(r => setTimeout(r, 300));
+      
+      await humanType(page, 'textarea', 'Welcome to the future of AI voices. This technology will transform how we create content forever.');
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Try to click the Generate/Play button
+      await safeClick(page, 'button[aria-label="Generate"]', 3000);
+      await safeClick(page, 'button*="Generate"', 3000);
+    }
+    
+    // Scroll through voice selection and features
+    await smoothScroll(page, 800, 3000);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Navigate to the Voice Library page
+    await safeNavigate(page, 'https://elevenlabs.io/voice-library', 3000);
+    await smoothScroll(page, 500, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Navigate to pricing
+    await safeNavigate(page, 'https://elevenlabs.io/pricing', 3000);
+    await smoothScroll(page, 400, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+  },
+
+  'julius': async (page) => {
+    // Julius AI - data analysis tool
+    console.log('[Screen Recorder] Julius AI: Showing data analysis demo...');
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Try to interact with any prompt/chat input
+    const ta = await page.$('textarea') || await page.$('input[type="text"]');
+    if (ta) {
+      const sel = (await page.$('textarea')) ? 'textarea' : 'input[type="text"]';
+      await humanType(page, sel, 'Analyze my sales data and create a monthly revenue chart with growth trends');
+      await new Promise(r => setTimeout(r, 2000));
+      await page.keyboard.press('Enter');
+      await new Promise(r => setTimeout(r, 4000));
+    }
+    
+    // Scroll through homepage features
+    await smoothScroll(page, 700, 2500);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Click on feature cards or tabs if available
+    await safeClick(page, '[class*="feature"]', 2000);
+    await safeClick(page, '[class*="tab"]', 2000);
+    
+    await smoothScroll(page, 500, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Navigate to use cases or pricing
+    await safeNavigate(page, 'https://julius.ai/pricing', 3000);
+    await smoothScroll(page, 400, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+  },
+
+  'cursor': async (page) => {
+    // Cursor - AI code editor
+    console.log('[Screen Recorder] Cursor: Showcasing AI coding features...');
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Browse the main landing page features
+    await smoothScroll(page, 600, 2500);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Click feature section links or demo videos
+    await safeClick(page, '[class*="feature"]', 2000);
+    await safeClick(page, 'a[href*="feature"]', 2000);
+    
+    await smoothScroll(page, 500, 2500);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Navigate to features page
+    await safeNavigate(page, 'https://cursor.com/features', 3000);
+    await smoothScroll(page, 600, 2500);
+    await new Promise(r => setTimeout(r, 2000));
+    await smoothScroll(page, 400, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Navigate to pricing
+    await safeNavigate(page, 'https://cursor.com/pricing', 3000);
+    await smoothScroll(page, 400, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+  },
+
+  'notebooklm': async (page) => {
+    // NotebookLM by Google
+    console.log('[Screen Recorder] NotebookLM: Exploring AI notebook features...');
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Scroll through the landing page
+    await smoothScroll(page, 500, 2500);
+    await new Promise(r => setTimeout(r, 2500));
+    
+    // Click on feature highlights or interactive elements
+    await safeClick(page, '[class*="card"]', 2000);
+    await safeClick(page, 'button', 2000);
+    
+    await smoothScroll(page, 600, 2500);
+    await new Promise(r => setTimeout(r, 2000));
+    await smoothScroll(page, 400, 2000);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Navigate to FAQ or about section
+    await safeNavigate(page, 'https://notebooklm.google/about', 3000);
+    await smoothScroll(page, 500, 2500);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+};
 
 // Main recording function
 export async function recordToolDemo(url, toolName, outputVideoPath, durationSeconds = 55) {
@@ -82,9 +263,7 @@ export async function recordToolDemo(url, toolName, outputVideoPath, durationSec
       frameIndex++;
       try {
         await cdp.send('Page.screencastFrameAck', { sessionId: params.sessionId });
-      } catch (e) {
-        // session may have ended
-      }
+      } catch (e) {}
     });
 
     await cdp.send('Page.startScreencast', {
@@ -92,109 +271,56 @@ export async function recordToolDemo(url, toolName, outputVideoPath, durationSec
       quality: 85,
       maxWidth: 1080,
       maxHeight: 1920,
-      everyNthFrame: 2 // capture every 2nd frame for smoother file sizes
+      everyNthFrame: 2
     });
 
     // Navigate to the tool
     console.log(`[Screen Recorder] Navigating to ${url}...`);
-    try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    } catch (e) {
-      console.warn(`[Screen Recorder] Navigation partial: ${e.message}`);
-    }
-
-    // Let the page render
-    await new Promise(r => setTimeout(r, 3000));
+    await safeNavigate(page, url, 3000);
 
     // Close cookie banners
-    try {
-      for (const sel of ['button*="Accept"', 'button*="Consent"', '#cookie-accept']) {
-        const btn = await page.$(sel);
-        if (btn) { await btn.click(); await new Promise(r => setTimeout(r, 500)); }
-      }
-    } catch (e) {}
+    await safeClick(page, 'button*="Accept"', 500);
+    await safeClick(page, 'button*="Consent"', 500);
+    await safeClick(page, '#cookie-accept', 500);
 
-    console.log(`[Screen Recorder] Performing live interactions for ${toolName}...`);
-
-    // === TOOL-SPECIFIC LIVE INTERACTIONS ===
+    // Run tool-specific demo interaction sequence
     const nameLower = toolName.toLowerCase();
+    let demoRan = false;
 
-    if (nameLower.includes('v0') || nameLower.includes('v0.dev')) {
-      try {
-        const ta = await page.$('textarea');
-        if (ta) {
-          await humanType(page, 'textarea', 'Build a sleek dark-mode dashboard with sidebar navigation and analytics charts', 50);
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      } catch (e) {}
-      await smoothScroll(page, 800, 3000);
-      await new Promise(r => setTimeout(r, 2000));
-      await smoothScroll(page, 600, 3000);
-      await new Promise(r => setTimeout(r, 2000));
-
-    } else if (nameLower.includes('julius')) {
-      try {
-        const ta = await page.$('textarea') || await page.$('input[type="text"]');
-        if (ta) {
-          const sel = (await page.$('textarea')) ? 'textarea' : 'input[type="text"]';
-          await humanType(page, sel, 'Upload my sales data CSV and create a revenue trend chart with monthly breakdown', 45);
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      } catch (e) {}
-      await smoothScroll(page, 900, 3000);
-      await new Promise(r => setTimeout(r, 2500));
-      await smoothScroll(page, 700, 3000);
-      await new Promise(r => setTimeout(r, 2000));
-
-    } else if (nameLower.includes('elevenlabs')) {
-      try {
-        const boxes = await page.$$('textarea');
-        if (boxes.length > 0) {
-          await boxes[0].focus();
-          await page.keyboard.down('Control');
-          await page.keyboard.press('KeyA');
-          await page.keyboard.up('Control');
-          await page.keyboard.press('Backspace');
-          await new Promise(r => setTimeout(r, 500));
-          await humanType(page, 'textarea', 'The future of content creation is here. AI voices that sound indistinguishable from real humans.', 50);
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      } catch (e) {}
-      await smoothScroll(page, 800, 3000);
-      await new Promise(r => setTimeout(r, 2000));
-      await smoothScroll(page, 600, 2500);
-      await new Promise(r => setTimeout(r, 2000));
-
-    } else if (nameLower.includes('cursor')) {
-      await new Promise(r => setTimeout(r, 2000));
-      await smoothScroll(page, 700, 3000);
-      await new Promise(r => setTimeout(r, 2500));
-      await smoothScroll(page, 500, 2500);
-      await new Promise(r => setTimeout(r, 2000));
-      await smoothScroll(page, 400, 2000);
-      await new Promise(r => setTimeout(r, 1500));
-
-    } else if (nameLower.includes('notebook')) {
-      await new Promise(r => setTimeout(r, 2000));
-      await smoothScroll(page, 600, 3000);
-      await new Promise(r => setTimeout(r, 2500));
-      await smoothScroll(page, 500, 2500);
-      await new Promise(r => setTimeout(r, 2000));
-      await smoothScroll(page, 400, 2000);
-      await new Promise(r => setTimeout(r, 1500));
-
-    } else {
-      // Generic: scroll through the page smoothly
-      await new Promise(r => setTimeout(r, 2000));
-      await smoothScroll(page, 600, 3000);
-      await new Promise(r => setTimeout(r, 2500));
-      await smoothScroll(page, 800, 3000);
-      await new Promise(r => setTimeout(r, 2000));
-      await smoothScroll(page, 500, 2500);
-      await new Promise(r => setTimeout(r, 1500));
+    for (const [key, demoFn] of Object.entries(toolDemos)) {
+      if (nameLower.includes(key)) {
+        console.log(`[Screen Recorder] Running custom demo sequence for: ${key}`);
+        await demoFn(page);
+        demoRan = true;
+        break;
+      }
     }
 
-    // Scroll back to top for a final hero shot
+    // Generic fallback: browse multiple pages
+    if (!demoRan) {
+      console.log('[Screen Recorder] Running generic multi-page browse demo...');
+      await new Promise(r => setTimeout(r, 2000));
+      await smoothScroll(page, 700, 3000);
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Try clicking navigation links to show different pages
+      const navLinks = await page.$$('nav a, header a');
+      for (let i = 0; i < Math.min(navLinks.length, 2); i++) {
+        try {
+          const href = await navLinks[i].evaluate(el => el.href);
+          if (href && !href.includes('login') && !href.includes('signup')) {
+            await safeNavigate(page, href, 3000);
+            await smoothScroll(page, 500, 2000);
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        } catch (e) {}
+      }
+      
+      await smoothScroll(page, 400, 2000);
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    // Final: scroll back to hero for closing shot
     await smoothScroll(page, -99999, 2000);
     await new Promise(r => setTimeout(r, 2000));
 
@@ -202,13 +328,13 @@ export async function recordToolDemo(url, toolName, outputVideoPath, durationSec
     await cdp.send('Page.stopScreencast');
     await cdp.detach();
 
-    console.log(`[Screen Recorder] Captured ${frameIndex} frames. Compiling to MP4 with FFmpeg...`);
+    console.log(`[Screen Recorder] Captured ${frameIndex} frames. Compiling to MP4...`);
 
     if (frameIndex < 10) {
       throw new Error(`Only captured ${frameIndex} frames — too few for a video.`);
     }
 
-    // Compile frames into an MP4 video using FFmpeg
+    // Compile frames into MP4
     const fps = Math.max(8, Math.min(15, Math.round(frameIndex / durationSeconds)));
     console.log(`[Screen Recorder] Using ${fps} FPS for ${frameIndex} frames...`);
 
@@ -224,7 +350,6 @@ export async function recordToolDemo(url, toolName, outputVideoPath, durationSec
     throw error;
   } finally {
     await browser.close();
-    // Cleanup frames
     if (fs.existsSync(framesDir)) {
       fs.readdirSync(framesDir).forEach(f => fs.unlinkSync(path.join(framesDir, f)));
       fs.rmdirSync(framesDir);

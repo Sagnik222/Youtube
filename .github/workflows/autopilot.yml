@@ -27,6 +27,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package.json
 
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+
       - name: Install Dependencies
         run: npm ci || npm install
 

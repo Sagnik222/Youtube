@@ -1,0 +1,16 @@
+{
+  "name": "yt-saas-reviewer",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "YouTube Automation Daemon for SaaS & AI Tool Reviews",
+  "main": "daemon.js",
+  "scripts": {
+    "start": "node daemon.js",
+    "prototype": "node test-prototype.js"
+  },
+  "dependencies": {
+    "axios": "^1.18.1",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.4.2"
+  }
+}

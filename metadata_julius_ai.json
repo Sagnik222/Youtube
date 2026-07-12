@@ -1,0 +1,14 @@
+{
+  "name": "Julius AI",
+  "tagline": "AI Data Analyst for spreadsheets and coding",
+  "category": "AI Data Science",
+  "features": [
+    "Analyzes Excel spreadsheets, CSVs, and PDFs",
+    "Generates clean python data visualizations",
+    "Explores regressions and predictive analytics",
+    "Supports plain-text mathematical inputs"
+  ],
+  "pricing": "Free trial; Premium plan is $20/month.",
+  "targetAudience": "Analysts, researchers, students, business owners",
+  "affiliateLink": "https://julius.ai?ref=ytsaas"
+}

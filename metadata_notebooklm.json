@@ -1,0 +1,14 @@
+{
+  "name": "NotebookLM",
+  "tagline": "Your personalized AI research assistant by Google",
+  "category": "AI Productivity",
+  "features": [
+    "Upload source documents (PDF, slides, docs) directly",
+    "Generates deep audio summaries / podcast dialogues",
+    "Answers queries based strictly on uploaded sources",
+    "Cites document page numbers in references"
+  ],
+  "pricing": "Completely free (Beta stage).",
+  "targetAudience": "Researchers, writers, students, knowledge workers",
+  "affiliateLink": "https://notebooklm.google?ref=ytsaas"
+}

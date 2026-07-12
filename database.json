@@ -1,0 +1,57 @@
+{
+  "products": [
+    {
+      "name": "v0.dev",
+      "status": "published",
+      "publishedAt": "2026-07-10T12:00:00.000Z",
+      "videoId": "yt-v0-dev-123"
+    },
+    {
+      "name": "ElevenLabs Reader",
+      "status": "published",
+      "publishedAt": "2026-07-11T12:00:00.000Z",
+      "videoId": "yt-eleven-labs-456"
+    },
+    {
+      "name": "Cursor Composer",
+      "status": "published",
+      "publishedAt": "2026-07-12T07:31:59.265Z",
+      "videoId": "mock_yt_5l7auvhad"
+    },
+    {
+      "name": "Julius AI",
+      "status": "published",
+      "publishedAt": "2026-07-12T07:32:29.269Z",
+      "videoId": "mock_yt_iio5hbf5h"
+    },
+    {
+      "name": "NotebookLM",
+      "status": "published",
+      "publishedAt": "2026-07-12T07:32:59.268Z",
+      "videoId": "mock_yt_80qlmt8qf"
+    }
+  ],
+  "channelStats": {
+    "subscribers": 142,
+    "totalViews": 4820,
+    "watchTimeHours": 81.5,
+    "estimatedEarningsUSD": 48.2,
+    "affiliateClicks": 290,
+    "affiliateSales": 12,
+    "affiliateEarningsUSD": 240
+  },
+  "history": [
+    {
+      "date": "2026-07-10",
+      "subscribers": 45,
+      "views": 1200,
+      "earnings": 12
+    },
+    {
+      "date": "2026-07-11",
+      "subscribers": 142,
+      "views": 4820,
+      "earnings": 48.2
+    }
+  ]
+}

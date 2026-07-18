@@ -46,6 +46,66 @@ const CURATED_PRODUCTS = [
     pricing: "Free trial; Pro plan is $20/month.",
     targetAudience: "Software Engineers, App Developers, Tech Founders",
     affiliateLink: "https://cursor.com?ref=ytsaas"
+  },
+  {
+    name: "Julius AI",
+    tagline: "AI Data Analyst for spreadsheets and coding",
+    category: "AI Data Science",
+    description: "An AI-powered data analysis tool that lets you upload spreadsheets and get instant charts, regressions, and predictions.",
+    features: [
+      "Analyzes Excel spreadsheets, CSVs, and PDFs",
+      "Generates clean python data visualizations",
+      "Explores regressions and predictive analytics",
+      "Supports plain-text mathematical inputs"
+    ],
+    pricing: "Free trial; Premium plan is $20/month.",
+    targetAudience: "Analysts, researchers, students, business owners",
+    affiliateLink: "https://julius.ai?ref=ytsaas"
+  },
+  {
+    name: "NotebookLM",
+    tagline: "Your personalized AI research assistant by Google",
+    category: "AI Productivity",
+    description: "Google's AI notebook that turns uploaded documents into interactive knowledge bases with podcast-style audio summaries.",
+    features: [
+      "Upload source documents (PDF, slides, docs) directly",
+      "Generates deep audio summaries / podcast dialogues",
+      "Answers queries based strictly on uploaded sources",
+      "Cites document page numbers in references"
+    ],
+    pricing: "Completely free (Beta stage).",
+    targetAudience: "Researchers, writers, students, knowledge workers",
+    affiliateLink: "https://notebooklm.google?ref=ytsaas"
+  },
+  {
+    name: "Bolt.new",
+    tagline: "AI full-stack app builder in the browser",
+    category: "AI Coding / No-Code",
+    description: "Build and deploy full-stack web applications directly in the browser using AI prompts. No local setup required.",
+    features: [
+      "Generates full-stack apps from text prompts",
+      "Runs entirely in the browser — no local setup",
+      "Supports React, Next.js, and Node.js backends",
+      "One-click deployment to production"
+    ],
+    pricing: "Free tier with limits; Pro plan from $20/month.",
+    targetAudience: "Founders, indie hackers, developers, students",
+    affiliateLink: "https://bolt.new?ref=ytsaas"
+  },
+  {
+    name: "Gamma AI",
+    tagline: "AI-powered presentations in seconds",
+    category: "AI Productivity / Design",
+    description: "Create beautiful presentations, documents, and websites using AI. Just describe what you want and Gamma builds it.",
+    features: [
+      "Generates polished slide decks from text prompts",
+      "Beautiful templates and design system built-in",
+      "Supports embedded media, charts, and interactivity",
+      "Export to PDF or present directly from browser"
+    ],
+    pricing: "Free tier available; Plus plan from $8/month.",
+    targetAudience: "Marketers, students, consultants, founders",
+    affiliateLink: "https://gamma.app?ref=ytsaas"
   }
 ];
 

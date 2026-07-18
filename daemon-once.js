@@ -162,7 +162,9 @@ async function runCronJob() {
         'elevenlabs reader': 'https://elevenlabs.io',
         'cursor composer': 'https://cursor.com',
         'julius ai': 'https://julius.ai',
-        'notebooklm': 'https://notebooklm.google'
+        'notebooklm': 'https://notebooklm.google',
+        'bolt.new': 'https://bolt.new',
+        'gamma ai': 'https://gamma.app'
       };
       
       const productUrl = urlMap[queuedProduct.name.toLowerCase()] || 'https://google.com';

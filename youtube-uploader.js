@@ -116,7 +116,7 @@ export async function uploadVideoProduction(videoMetadata, videoFilePath) {
           categoryId: '28' // Science & Technology
         },
         status: {
-          privacyStatus: 'unlisted', // Upload as unlisted so you can review before setting public
+          privacyStatus: 'public', // Upload as public for maximum algorithm reach
           selfDeclaredMadeForKids: false
         }
       },
